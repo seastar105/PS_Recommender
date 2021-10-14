@@ -9,23 +9,67 @@ import myloginpath
 
 class DBHelper(object):
     """
+    Helper class for mysql client. 
+    It refresh if connection is dead when query.
+
+    Parameters
+    --------------------
+    conf_path : Optional[str]
+        configure file's path created by mysql_config_editor
+
     Attributes
     --------------------
-        connection : mysql.Connection
+    connection : mysql.Connection
+        connection to corresponding server.
+    conf : Dict
+        Mysql server confiuration
+    db_name : str
+        name of target db in server.
+    max_try : int
+        try to make connection each second at most max_try when 
+        mysql.OperationalError has been raised.
     """
-    def __init__(self):
+    def __init__(self, conf_path: Optional[str] = None):
         self.db_name = "PS"
-        self.conf = myloginpath.parse(self.db_name, path="./.mylogin.cnf")
-        self.connection = mysql.connect(**self.conf, database=self.db_name)
+        if conf_path:
+            try:
+                self.conf = myloginpath.parse(self.db_name, path=conf_path)
+            except FileNotFoundError:
+                print("No such configure file %s" %conf_path)
+                print("Use Default Path for configure file")
+                conf_path = None
+        if conf_path is None:
+            try:
+                self.conf = myloginpath.parse(self.db_name)
+            except FileNotFoundError:
+                print("No configure file exists")
+                print("Can not make connection to DB server")
+                return
+        self.connection = None
+        self.max_try = 5
+        self.make_connection()
+        # self.connection = mysql.connect(**self.conf, database=self.db_name)
 
-    def make_connect(self):
+    def make_connection(self, times: int = 0):
         """ Make connection to MySQL server according to configure.
+
+        Exception
+        --------------------
+        mysql.OperationalError
+            If server is not 
+
+        
         """
         try:
             self.connection = mysql.connect(**self.conf, db=self.db_name)
-        except Exception as e:
-            # TODO : if error occurs, what to do?
-            print(e)
+        except mysql.OperationalError as e:
+            if times < self.max_try:
+                time.sleep(1)
+                self.make_connection(times+1)
+            else:
+                # TODO : Implement ServerNotFoundError and Raise it here
+                pass
+            
 
     def query(self, query_string: str) -> Optional[Tuple]:
         """ Returns all result by tuple of dictionary, one row per dict.
@@ -43,15 +87,19 @@ class DBHelper(object):
         ret : Optional[Tuple]
             Tuple of dicts. Each dict is one row in query result. 
             None if query_string is invalid
+
+        Examples
+        --------------------
+        >>> db = DBHelper('./.mylogin.cnf')
         """
         try:
             cur = self.connection.cursor(cursorclass=mysql.cursors.DictCursor)
             cur.execute(query_string)
         except mysql.OperationalError:
-            self.make_connect()
-            cur = self.connection.cursor(cursorclass=mysql.cursors.DictCursor)
+
+            self.make_connection()
             return self.query(query_string)
-        except mysql.ProgrammingError as e:
+        except mysql.ProgrammingError:
             print('Wrong Query String \"%s\"' %query_string)
             return None
         ret = cur.fetchall()

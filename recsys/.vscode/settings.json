@@ -1,0 +1,12 @@
+{
+  "editor.tokenColorCustomizations": {
+    "comments": "#EFDC05", 
+    "textMateRules":[
+      {
+        "scope": "string.quoted.docstring.multi.python",
+        "settings":{
+          "foreground": "#EFDC05"          }
+      }
+    ]
+  },  
+}
