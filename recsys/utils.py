@@ -6,6 +6,9 @@ from typing import Tuple, Optional, Dict
 import MySQLdb as mysql
 import myloginpath
 
+class NoConnectionError(Exception):
+    """Exception when make connection fails max_try times"""
+    pass
 
 class DBHelper(object):
     """
@@ -47,18 +50,20 @@ class DBHelper(object):
                 return
         self.connection = None
         self.max_try = 5
-        self.make_connection()
+        try:
+            self.make_connection()
+        except NoConnectionError as e:
+            print(e)
         # self.connection = mysql.connect(**self.conf, database=self.db_name)
 
-    def make_connection(self, times: int = 0):
+
+    def make_connection(self, times: int = 1):
         """ Make connection to MySQL server according to configure.
 
-        Exception
+        Raises
         --------------------
-        mysql.OperationalError
-            If server is not 
-
-        
+        NoConnectionError
+            If it fails to connect server for max_try times with 1 second interval
         """
         try:
             self.connection = mysql.connect(**self.conf, db=self.db_name)
@@ -67,8 +72,7 @@ class DBHelper(object):
                 time.sleep(1)
                 self.make_connection(times+1)
             else:
-                # TODO : Implement ServerNotFoundError and Raise it here
-                pass
+                raise NoConnectionError(f'Fails {self.max_try} time to connect mysql server. Please check server')
             
 
     def query(self, query_string: str) -> Optional[Tuple]:
@@ -91,16 +95,22 @@ class DBHelper(object):
         Examples
         --------------------
         >>> db = DBHelper('./.mylogin.cnf')
+        >>> query_string = 'SELECT * FROM user WHERE handle=\'seastar105\''
+        >>> db.query(query_string)
+        ({'id': 52, 'handle': 'seastar105'},)
         """
         try:
             cur = self.connection.cursor(cursorclass=mysql.cursors.DictCursor)
             cur.execute(query_string)
         except mysql.OperationalError:
-
-            self.make_connection()
+            try:
+                self.make_connection()
+            except NoConnectionError as e:
+                print(e)
+                return None
             return self.query(query_string)
         except mysql.ProgrammingError:
-            print('Wrong Query String \"%s\"' %query_string)
+            print(f'Wrong Query String \"{query_string}\"')
             return None
         ret = cur.fetchall()
         return ret
