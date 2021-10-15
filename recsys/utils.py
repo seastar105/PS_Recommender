@@ -68,6 +68,7 @@ class DBHelper(object):
         try:
             self.connection = mysql.connect(**self.conf, db=self.db_name)
         except mysql.OperationalError as e:
+            # Is it best practice?
             if times < self.max_try:
                 time.sleep(1)
                 self.make_connection(times+1)
@@ -88,7 +89,7 @@ class DBHelper(object):
         
         Returns
         --------------------
-        ret : Optional[Tuple]
+        result : Optional[Tuple]
             Tuple of dicts. Each dict is one row in query result. 
             None if query_string is invalid
 
@@ -112,31 +113,84 @@ class DBHelper(object):
         except mysql.ProgrammingError:
             print(f'Wrong Query String \"{query_string}\"')
             return None
-        ret = cur.fetchall()
-        return ret
+        result = cur.fetchall()
+        return result
 
 
-def call_file_sorted(path):
-    directory = os.fsencode(path)
-    ret = []
-    for file in os.listdir(directory):
-        filename = os.fsdecode(file)
-        filename = os.path.join(path, filename)
-        ret.append(filename)
-    ret.sort()
-    return ret
+    def get_problem_exp(self, problem_id: int) -> Tuple:
+        """Returns corresponding problem's id and exp, empty tuple if not exist.
+
+        Parameters
+        --------------------
+        problem_id : int
+            problem id of target problem
+        """
+        return self.query(f'SELECT * FROM problem WHERE id={problem_id}')
 
 
-def change_path(target_path, source_path, ext):
-    basename = os.path.basename(source_path)
-    basename = os.path.splitext(basename)[0]
-    return_path = os.path.join(target_path, basename) + ext
-    return return_path
+    def get_problem_tags(self, problem_id: int) -> Dict:
+        """Returns tags, exp of corresponding problem
 
+        It returns dictionary of corresponding problem.
+
+        Parameters
+        --------------------
+        problem_id : int
+            problem id of target problem
+        
+        Returns
+        --------------------
+        result : Dict
+            If there's no corresponding problem, it's empty dictoionary
+            result has this format {"exp" : int, "tags" : List[int]}
+            exp is problem's exp, problem is not ratable or unrated, exp is zero
+            tags is list of tag id. it can be empty
+        """
+        problem_info = self.get_problem_exp(problem_id)
+        if bool(problem_info) is False: # empty row
+            return dict()
+
+        result = {'exp' : problem_info[0]['exp']}
+        result['tags'] = list()
+        if result['exp'] == 0:
+            return result
+
+        query_string = f'\
+            SELECT tag_id \
+            FROM problem join problem_tag on problem.id = problem_tag.problem_id \
+            WHERE problem.id = {problem_id}'
+        temp = self.query(query_string)
+        for row in temp:
+            result['tags'].append(row['tag_id'])
+        return result
+
+
+    def get_user_tags(self, handle: str) -> Dict:
+        pass
+
+    
+    def check_user_problem(self, handle: str, problem_id: int) -> bool:
+        """Returns True if user solved problem_id, False if not.
+
+        Parameters
+        --------------------
+        handle : str
+            user handle
+        problem_id : int
+            target problem id
+        """
+        query_string = f'\
+            SELECT * \
+            FROM ac \
+            WHERE user_id in (SELECT id FROM user WHERE handle=\'{handle}\') and problem_id={problem_id}'
+        res = self.query(query_string)
+        return bool(res)
+        
 
 def main():
     db = DBHelper()
     print(db.query("SELECT * FROM user LIMIT 10"))
+    # Should work if connection has been closed.
     db.connection.close()
     print(db.query("SELECT * FROM tag LIMIT 10"))
     wrong_string = "SELECT * FROM users LIMIT 10"
