@@ -165,8 +165,43 @@ class DBHelper(object):
         return result
 
 
-    def get_user_tags(self, handle: str) -> Dict:
-        pass
+    def get_user_tags(self, handle: str) -> Optional[Dict]:
+        """Returns exp of each tags user solved.
+
+        Parameters
+        --------------------
+        handle : str
+            user handle
+
+        Returns
+        --------------------
+        result : Optional[Dict]
+            exp of tags user solved. It has only tag with exp > 0. 
+            Format : { tag_id[int] : exp_sum[int] }
+            It is None if there's no such user.
+            
+        """
+        if not self.check_user(handle):
+            return None
+        query_string = f'\
+            SELECT SUM(exp) as exp_sum, tag_id \
+            FROM ( \
+                SELECT t2.id, exp \
+                FROM ( \
+                    SELECT problem_id \
+                    FROM user join ac ON user.id = ac.user_id \
+                    WHERE user.handle = \'{handle}\' \
+                ) AS t1 JOIN problem AS t2 ON t1.problem_id = t2.id \
+            ) AS p1 join problem_tag AS p2 ON p1.id = p2.problem_id \
+            GROUP BY tag_id \
+            ORDER BY exp_sum DESC'
+        query_res = self.query(query_string)
+        result = dict()
+        for row in query_res:
+            tag_id = row['tag_id']
+            exp_sum = row['exp_sum']
+            result[tag_id] = int(exp_sum)
+        return result
 
     
     def check_user_problem(self, handle: str, problem_id: int) -> bool:
@@ -178,6 +213,10 @@ class DBHelper(object):
             user handle
         problem_id : int
             target problem id
+
+        Returns
+        --------------------
+        True if user with handle solved problem_id, False if not.
         """
         query_string = f'\
             SELECT * \
@@ -185,7 +224,26 @@ class DBHelper(object):
             WHERE user_id in (SELECT id FROM user WHERE handle=\'{handle}\') and problem_id={problem_id}'
         res = self.query(query_string)
         return bool(res)
-        
+
+    
+    def check_user(self, handle: str) -> bool:
+        """Returns True if user with handle exists in DB, False if not
+
+        Parameters
+        --------------------
+        handle : str
+            user handle
+
+        Returns
+        --------------------
+        True if user with handle exists in DB, False if not. 
+        """
+        query_string = f'\
+            SELECT * \
+            FROM user \
+            WHERE handle = \'{handle}\''
+        res = self.query(query_string)
+        return bool(res)        
 
 def main():
     db = DBHelper()
