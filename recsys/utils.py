@@ -128,7 +128,7 @@ class DBHelper(object):
         return self.query(f'SELECT * FROM problem WHERE id={problem_id}')
 
 
-    def get_problem_tags(self, problem_id: int) -> Dict:
+    def get_problem_tags(self, problem_id: int) -> Optional[Dict]:
         """Returns tags, exp of corresponding problem
 
         It returns dictionary of corresponding problem.
@@ -148,7 +148,7 @@ class DBHelper(object):
         """
         problem_info = self.get_problem_exp(problem_id)
         if bool(problem_info) is False: # empty row
-            return dict()
+            return None
 
         result = {'exp' : problem_info[0]['exp']}
         result['tags'] = list()
