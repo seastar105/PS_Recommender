@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import time
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Optional, Dict, List
 import MySQLdb as mysql
 import myloginpath
 
@@ -202,6 +202,51 @@ class DBHelper(object):
             exp_sum = row['exp_sum']
             result[tag_id] = int(exp_sum)
         return result
+    
+    def get_user_problems(self, handle: str) -> Optional[List[int]]:
+        """Returns list of problems user solved
+        
+        Parameters
+        --------------------
+        handle : str
+            user handle
+
+        Returns
+        --------------------
+        result : Optional[List[int]]
+            list of the number of problems user solved.
+            It is None if there's no such user.
+        """
+        if not self.check_user(handle):
+            return None
+        query_string=f'\
+            SELECT problem_id \
+            FROM user join ac on user.id = ac.user_id \
+            WHERE user.handle = \'{handle}\' '
+        query_res = self.query(query_string)
+        result = [row['problem_id'] for row in query_res]
+        
+        return result
+    
+    def topk_problems(self, handle: str, k: int) :
+        """Returns list of top k problems user solved.
+        """
+        if not self.check_user(handle):
+            return None
+        query_string=f'\
+            SELECT problem.id, problem.tier, problem.exp\
+            FROM ( \
+                SELECT problem_id \
+                FROM user join ac on user.id = ac.user_id \
+                WHERE user.handle = \'{handle}\' \
+               ) AS t1 join problem on problem.id = t1.problem_id \
+            ORDER BY tier DESC \
+            LIMIT {k}'
+            
+        query_res = self.query(query_string)
+        result = [row for row in query_res]
+        
+        return result
 
     
     def check_user_problem(self, handle: str, problem_id: int) -> bool:
@@ -247,12 +292,16 @@ class DBHelper(object):
 
 def main():
     db = DBHelper()
+    """
     print(db.query("SELECT * FROM user LIMIT 10"))
     # Should work if connection has been closed.
     db.connection.close()
     print(db.query("SELECT * FROM tag LIMIT 10"))
     wrong_string = "SELECT * FROM users LIMIT 10"
     print(db.query(wrong_string))
+    """
+    #print(db.get_user_problems('dtc03003'))
+    print(db.check_user('raar'))
 
 
 if __name__ == "__main__":
