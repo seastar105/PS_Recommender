@@ -74,7 +74,6 @@ class DBHelper(object):
                 self.make_connection(times+1)
             else:
                 raise NoConnectionError(f'Fails {self.max_try} time to connect mysql server. Please check server')
-            
 
     def query(self, query_string: str) -> Optional[Tuple]:
         """ Returns all result by tuple of dictionary, one row per dict.
