@@ -45,6 +45,9 @@ class RecModel(AbsModel):
                 ))
         strong_tag = [tag['name'] for tag in tags[:len(tags)//2]]
         weak_tag = [tag['name'] for tag in tags[len(tags)//2:]]
+
+        problems['all'] = [v[-1] for k, v in problems.items()]
+
         tags = Tag(
             strong=strong_tag,
             weak=weak_tag

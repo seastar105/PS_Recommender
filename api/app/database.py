@@ -66,7 +66,7 @@ class DBHelper(object):
             If it fails to connect server for max_try times with 1 second interval
         """
         try:
-            self.connection = mysql.connect(**self.conf, db=self.db_name)
+            self.connection = mysql.connect(**self.conf, db=self.db_name, use_unicode=True, charset="utf8")
         except mysql.OperationalError as e:
             # Is it best practice?
             if times < self.max_try:
@@ -74,6 +74,7 @@ class DBHelper(object):
                 self.make_connection(times+1)
             else:
                 raise NoConnectionError(f'Fails {self.max_try} time to connect mysql server. Please check server')
+            
 
     def query(self, query_string: str) -> Optional[Tuple]:
         """ Returns all result by tuple of dictionary, one row per dict.
@@ -112,6 +113,7 @@ class DBHelper(object):
         except mysql.ProgrammingError:
             print(f'Wrong Query String \"{query_string}\"')
             return None
+        self.connection.commit()
         result = cur.fetchall()
         return result
 
@@ -299,8 +301,7 @@ def main():
     wrong_string = "SELECT * FROM users LIMIT 10"
     print(db.query(wrong_string))
     """
-    #print(db.get_user_problems('dtc03003'))
-    print(db.check_user('raar'))
+    print(db.query('dtc03003'))
 
 
 if __name__ == "__main__":
