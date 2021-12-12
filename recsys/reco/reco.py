@@ -237,7 +237,7 @@ class Model(object):
 
 
 model = Model()
-db = DBHelper()
+db = DBHelper('.mylogin.cnf')
 handle = 'swoon'
 print(handle)
 #print(db.query('SELECT * FROM problem WHERE names is not NULL'))
