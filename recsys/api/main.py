@@ -5,14 +5,11 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 import datetime
 from api.model import Recommend, User, Tag, Problem
-from api.rec_models import RecModel
+from reco.reco import Model
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 from utils import DBHelper
-
-db = DBHelper('./.mylogin.cnf')
-model = RecModel()
 
 origins = [
     "*"
@@ -27,34 +24,14 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+
+db = DBHelper('./.mylogin.cnf')
+model = Model()
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
-
-# @app.get("/api/rec/{handle}")
-# def get_recommend(handle: str, response: Response) -> Recommend:
-#
-#     # NOTE : Why fastapi Middleware not working????
-#     response.headers["Access-Control-Allow-Origin"] = "*"
-#
-#     user = User(id=handle)
-#     res = Recommend(
-#         code=404,
-#         datetime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-#         user=user
-#     )
-#
-#     rec = model.inference(handle)
-#
-#     if rec is None:
-#         return res
-#
-#     # Available user, status code 200
-#     res.code = 200
-#     res.tag, res.problems = rec
-#
-#     return res
 
 def get_problem_tag_names(problem_id):
     query_string = f'\
@@ -83,22 +60,22 @@ def get_recommend(handle: str, response: Response) -> Recommend:
     # Available user, status code 200
     res.code = 200
 
-    strong_tag, weak_tag, problems = model.inference(handle)
+    strong_tag, weak_tag, problems = model.recommend(handle)
     res.tag = Tag(
-        strong_tag=strong_tag,
-        weak_tag=weak_tag
+        strong=strong_tag,
+        weak=weak_tag
     )
 
     res.problems = dict()
     for k, v in problems.items():
         res.problems[k] = list()
         for problem_id in v:
-            row = db.query(f'SELECT * FROM problem where problem_id={problem_id}')
+            row = db.query(f'SELECT * FROM problem where id={problem_id}')[0]
             res.problems[k].append(Problem(
                 id=problem_id,
                 name=row['name'],
                 tier=row['tier'],
-                tags=get_problem_tag_names(problem_id)
+                tag=get_problem_tag_names(problem_id)
             ))
 
     return res

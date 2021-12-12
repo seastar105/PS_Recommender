@@ -10,7 +10,6 @@ from n2 import HnswIndex
 from utils import DBHelper
 
 core_tag = [1, 2, 3, 4, 5, 6, 7, 9, 13, 14, 15, 20, 22, 23, 24, 27, 38, 41, 52, 53]
-#core_tag = [1, 2, 3, 4, 5, 6, 7, 11]
 idx2tag = {1:"math", 2:"implementation", 3:"dp", 4:"graphs", 5:"data_structures",
             6:"string", 7:"greedy", 9:"bruteforcing", 14:"geometry", 13:"number_theory",
             15:"binary_search", 20:"combinatorics", 23:"ad_hoc", 22:"constructive", 24:"bitmask",
@@ -23,23 +22,33 @@ exp_table = [480, 672, 954, 1374, 1992,
             1520366, 2371771, 3711822, 5827560, 9178407,
             14501883, 22985485, 36546921, 58292339, 93267742]
 
-# strong_tag : List[str]
-# weak_tag : List[str]
-# problems : Dict[str:List[int]]
 class Model(object):
     def __init__(self):
         self.u = HnswIndex(179, 'angular')
-        self.u.load('userModel.n2')
+        self.u.load('./reco/userModel.n2')
 
         self.idx2handle = dict()
         self.handle2idx = dict()
 
-        fin = open('handle2idx', 'r')
+        fin = open('./reco/handle2idx', 'r')
 
         for _ in range(39839):
             idx, handle = fin.readline().split()
             self.idx2handle[idx] = handle.lower()
             self.handle2idx[handle.lower()] = idx
+        
+        self.problem_tags = []
+        for _ in range(1000):
+            self.problem_tags.append([])
+        
+        last_num = db.query('SELECT id FROM problem ORDER BY id DESC LIMIT 1')[0]['id']
+        
+        for pid in range(1000, last_num + 1):
+            if db.query(f'SELECT * FROM problem WHERE id = \'{pid}\'') == False:
+                self.problem_tags.append([])
+            tags = db.get_problem_tags(pid)
+            #print(pid, tags)
+            self.problem_tags.append(tags)
     
     def getNeighbors(self, handle:str):
         handle = handle.lower()
@@ -67,7 +76,7 @@ class Model(object):
         weak = []
 
         targetRank = int(self.handle2idx[handle])
-        fpath = './userVec.json'
+        fpath = './reco/userVec.json'
 
         userList = []
         with open(fpath, 'r') as json_file:
@@ -125,26 +134,10 @@ class Model(object):
         for neighbors in weak_neighbors:
             unsolved |= set(db.get_user_problems(neighbors))
         unsolved -= set(solved)
-        
+
+
         strong_list = [[] for _ in range(len(strong_tags))]
         weak_list = [[] for _ in range(len(weak_tags))]
-
-        for problem in unsolved:
-            problem_tags = db.get_problem_tags(problem)
-            for tag in problem_tags['tags']:
-                if idx2tag.get(tag) == None:
-                    continue
-                if idx2tag[tag] in strong_tags:
-                    strong_list[strong_tags.index(idx2tag[tag])].append((exp_table.index(problem_tags['exp'])+1, problem))
-                elif idx2tag[tag] in weak_tags:
-                    weak_list[weak_tags.index(idx2tag[tag])].append((problem_tags['exp'], problem))
-        
-        for i in range(len(strong_list)):
-            strong_list[i].sort()
-        for i in range(len(weak_list)):
-            weak_list[i].sort()
-        for l in weak_list:
-            l.sort()
 
         strong_exps = [0 for _ in range(len(strong_tags))]
         strong_cnt = [0 for _ in range(len(strong_tags))]
@@ -154,8 +147,9 @@ class Model(object):
 
         topKproblems = db.topk_problems(handle, 200)
         for problem in topKproblems:
-            problem_tags = db.get_problem_tags(problem['id'])
-            for tag in problem_tags['tags']:
+            #print(problem)
+            tags = self.problem_tags[problem['id']]
+            for tag in tags['tags']:
                 if idx2tag.get(tag) == None:
                     continue
                 if idx2tag[tag] in strong_tags:
@@ -164,12 +158,11 @@ class Model(object):
         
         
         for problem in solved:
-           problem_tags = db.get_problem_tags(problem)
-           for tag in problem_tags['tags']:
+           tags = self.problem_tags[problem]
+           for tag in tags['tags']:
                 if idx2tag.get(tag) == None:
                     continue
                 if idx2tag[tag] in weak_tags:
-                    #weak_exps[weak_tags.index(idx2tag[tag])] += exp_table.index(db.get_problem_exp(problem)[0]['exp']) + 1
                     weaks[weak_tags.index(idx2tag[tag])].append(exp_table.index(db.get_problem_exp(problem)[0]['exp']) + 1)
                     weak_cnt[weak_tags.index(idx2tag[tag])] += 1
         
@@ -179,8 +172,6 @@ class Model(object):
         for i in range(len(weak_exps)):
             weaks[i].sort()
             if weak_cnt[i]//2 != 0:
-                #weak_exps[i] = sum(weaks[i])
-                #weak_exps[i] /= (weak_cnt[i])
                 weak_exps[i] = sum(weaks[i][(len(weaks[i])+1)//2:])
                 weak_exps[i] /= (weak_cnt[i]//2)
                 weak_exps[i] = int(weak_exps[i])
@@ -189,72 +180,82 @@ class Model(object):
         
         for x in range(len(strong_exps)):
             strong_exps[x] = bisect.bisect_left(exp_table, strong_exps[x])
-        #for x in range(len(weak_exps)):
-            #print(weak_exps[x])
-            #weak_exps[x] = bisect.bisect_left(exp_table, weak_exps[x])
-        '''
-        print(strong_tags)
-        print(strong_exps)
-        print(weak_tags)
-        print(weak_exps)
-        '''
+
+        for problem in unsolved:
+            tags = self.problem_tags[problem]
+            for tag in tags['tags']:
+                if idx2tag.get(tag) == None:
+                    continue
+                if idx2tag[tag] in strong_tags:
+                    strong_list[strong_tags.index(idx2tag[tag])].append((exp_table.index(tags['exp'])+1, problem))
+                elif idx2tag[tag] in weak_tags:
+                    weak_list[weak_tags.index(idx2tag[tag])].append((tags['exp'], problem))
         
-        ret_strong = {}
-        ret_weak = {}
         for i in range(len(strong_list)):
-            #l = bisect.bisect_left(strong_list[i], (exp_table[max(strong_exps[i] - 5, 1)],0))
-            #r = bisect.bisect_right(strong_list[i], (exp_table[min(strong_exps[i] + 2, 30)],0))
+            strong_list[i].sort()
+        for i in range(len(weak_list)):
+            weak_list[i].sort()
+        for l in weak_list:
+            l.sort()
+        
+        ret_all = {}
+
+        best_recommend = []
+        for i in range(len(strong_list)):
             l = bisect.bisect_left(strong_list[i], (max(strong_exps[i] - 5, 1),0))
             r = bisect.bisect_right(strong_list[i], (min(strong_exps[i] + 2, 30),0))
             strong_list[i] = strong_list[i][l:r+1]
             batch = len(strong_list[i]) // 5
             if batch < 5:
                 batch = 1
-            #strong_list[i] = random.sample(strong_list[i], min(5, len(strong_list[i])))
+
             lst = []
+            
+            cnt = 5
             for j in range(0, len(strong_list[i]), batch):
-                lst.append(strong_list[i][j][1])
-            ret_strong[strong_tags[i]] = lst
+                if cnt < 0:
+                    break
+                if cnt == 1:
+                    best_recommend.append(strong_list[i][j][1])
+                else:
+                    lst.append(strong_list[i][j][1])
+                cnt -= 1
+            #ret_strong[strong_tags[i]] = lst
+            ret_all[strong_tags[i]] = lst
             
             
 
         for i in range(len(weak_list)):
-            #l = bisect.bisect_left(weak_list[i], (max(weak_exps[i] - 5, 1),0))
+            l = bisect.bisect_left(weak_list[i], (exp_table[max(weak_exps[i] - 5, 1)],0))
             r = bisect.bisect_right(weak_list[i], (exp_table[min(weak_exps[i] + 1, 30)],0))
-            #print(weak_exps[i])
-            weak_list[i] = weak_list[i][0:r+1]
+            weak_list[i] = weak_list[i][l:r+1]
             batch = len(weak_list[i]) // 5
             if batch < 5:
                 batch = 1
-            #weak_list[i] = random.sample(weak_list[i], min(5, len(weak_list[i])))
             lst = []
+
+            cnt = 5
             for j in range(0, len(weak_list[i]), batch):
-                lst.append(weak_list[i][j][1])
-            ret_weak[weak_tags[i]] = lst
-        
-        return ret_strong, ret_weak
+                if cnt < 0:
+                    break
+                if cnt == 1:
+                    best_recommend.append(weak_list[i][j][1])
+                else: 
+                    lst.append(weak_list[i][j][1])
+                cnt -= 1
+            #ret_weak[weak_tags[i]] = lst
+            ret_all[weak_tags[i]] = lst
+        ret_all['all'] = best_recommend
+        return strong_tags, weak_tags, ret_all
 
 
-
-model = Model()
 db = DBHelper('.mylogin.cnf')
-handle = 'swoon'
-print(handle)
-#print(db.query('SELECT * FROM problem WHERE names is not NULL'))
-#print(*model.getNeighbors('raararaara'), sep='\n')
-#print(model.strong_weak('raararaara'), sep = '\n')
-#print(db.topk_problems('raararaara', 10))
-print(model.recommend(handle), sep='\n')
 
-'''
 def main():
     model = Model()
-    db = DBHelper()
-
-    print(*model.getNeighbors('raararaara'), sep='\n')
-    #print(model.strong_weak('st42597'), sep = '\n')
-    #print(db.query('raararaara'))
+    handle = 'raararaara'
+    print(handle)
+    print(model.recommend(handle), sep='\n')
 
 if __name__ == "__main__":
     main()
-'''
