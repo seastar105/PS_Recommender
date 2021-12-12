@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko-KR">
+  <head>
+    <meta charset="utf-8">
+    <title>User - PS Recommender</title>
+    
+    <link rel="stylesheet" href="/sass/main.css">
+    <link rel="stylesheet" href="/sass/user.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  </head>
+
+  <body>
+
+    <nav>
+      <div class="first-child maxwidth">
+        <a href="/" class="flexwrap">
+          <img id="navImg" src="/assets/55-Hourglass.png">
+          <h3>PS Recommender</h3>
+        </a>
+      </div>
+    </nav>
+    
+    <main class="maxwidth">
+
+      <div class="first-child flexwrap">
+        <img id="userTierImg" src="/assets/solved-ac-emoji/unranked.png" onerror="this.src='/assets/solved-ac-emoji/unranked.png'">
+        <h1>gumgood</h1>
+      </div>
+
+      <user-info>
+
+        <div id="user-school" class="flexwrap">
+          <img id="schoolImg" src="/assets/106-Book.png">
+          <span>서강대학교</span>  <!-- user['school']에 맞게 바꿔야 함-->
+        </div>
+
+        <div id="user-solved">
+          <span><b id="ranking">-</b>위</span>
+          <span><b id="solved">-</b>문제 해결</span>
+          <span>Rating <b id="rating">-</b></span>
+        </div>
+      </user-info>
+
+      <status>
+        
+      </status>
+
+    </main>
+
+    <footer>
+    </footer>
+      
+    <script src="/script/user.js"></script>
+  </body>
+</html>

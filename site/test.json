@@ -1,0 +1,87 @@
+{
+    "code": 200,
+    "datatime": "2016-10-06T19:58:29Z",
+    "user": {
+        "id": "seastar105",
+        "school": "295",
+        "tier": "ruby5",
+        "ranking": 52,
+        "solved": 1365,
+        "rating": 2745
+    },
+    "tag": {
+        "strong": [
+            "math",
+            "greedy",
+            "dp",
+            "datastructures"
+        ],
+        "weak": [
+            "string",
+            "implementation",
+            "geometry"
+        ]
+    },
+    "problems": {
+        "all": [
+            {
+                "id": 1000,
+                "tier": "bronze5",
+                "tag": [
+                    "geometry",
+                    "binary_search"
+                ]
+            },
+            {
+                "id": 1001,
+                "tier": "bronze4",
+                "tag": [
+                    "implementation"
+                ]
+            },
+            {
+                "id": 1003,
+                "tier": "bronze3",
+                "tag": [
+                    "ad-hoc"
+                ]
+            }
+        ],
+        "geometry": [
+            {
+                "id": 2000,
+                "tier": "bronze5",
+                "tag": [
+                    "geometry",
+                    "binary_search"
+                ]
+            },
+            {
+                "id": 2020,
+                "tier": "bronze5",
+                "tag": [
+                    "geometry",
+                    "dp"
+                ]
+            }
+        ],
+        "string": [
+            {
+                "id": 3000,
+                "tier": "platinum5",
+                "tag": [
+                    "string",
+                    "binary_search"
+                ]
+            },
+            {
+                "id": 2320,
+                "tier": "platinum5",
+                "tag": [
+                    "string",
+                    "dp"
+                ]
+            }
+        ]
+    }
+}
