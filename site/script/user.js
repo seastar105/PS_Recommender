@@ -8,16 +8,17 @@ var stat = document.querySelector('status');
 var statProcessing = newElement('p', '분석 중입니다...');
 stat.appendChild(statProcessing);
 
-const requestURL = 'http://49.247.26.236:8000/api/rec/' + id; // server API
-var request = new XMLHttpRequest();
-request.open('GET', requestURL);
-request.responseType = 'json';
-request.send();
+// API to recommend server
+const recommendRequestURL = 'http://49.247.26.236:8000/api/rec/' + id; // server API
+var recommendRequest = new XMLHttpRequest();
+recommendRequest.open('GET', recommendRequestURL);
+recommendRequest.responseType = 'json';
+recommendRequest.send();
 
-request.onload = function() {
-    const json = request.response;
+recommendRequest.onload = function() {
+    const json = recommendRequest.response;
     const code = json['code'];
-    console.log(json);
+    //console.log(json);
 
     if(code == 200) loadStatus(json);
     else loadError();
@@ -41,13 +42,14 @@ function loadError() {
 }
 
 function tierChar(tier) {
+    var num = 6 - (tier % 5 ? tier % 5 : 5);
     if(tier <=  0) return "unranked";
-    if(tier <=  5) return "bronze" + (tier % 5 + 1);
-    if(tier <= 10) return "silver" + (tier % 5 + 1);
-    if(tier <= 15) return "gold" + (tier % 5 + 1);
-    if(tier <= 20) return "platinum" + (tier % 5 + 1);
-    if(tier <= 25) return "diamond" + (tier % 5 + 1);
-    if(tier <= 30) return "ruby" + (tier % 5 + 1);
+    if(tier <=  5) return "bronze" + num;
+    if(tier <= 10) return "silver" + num;
+    if(tier <= 15) return "gold" + num;
+    if(tier <= 20) return "platinum" + num;
+    if(tier <= 25) return "diamond" + num;
+    if(tier <= 30) return "ruby" + num;
     return "unranked";
 }
 
@@ -55,32 +57,65 @@ function loadStatus(json) {
     const user = json['user'];
     const tag = json['tag'];
     const problems = json['problems'];
-
-    // load user info ////////////////////////////////////////////////////
-    var handleTier = document.querySelector('img#userTierImg');
-    handleTier.src = "/assets/solved-ac-emoji/" + tierChar(user['tier']) + ".png";
-
-    var userInfo = document.getElementsByTagName('user-info')[0];
-    userInfo.style.display = 'block';
-    for(let info of ['ranking', 'solved', 'rating']) {
-        var obj = document.querySelector('#' + info);
-        obj.textContent = user[info];
-    }
-
-    // clear status
     stat.removeChild(statProcessing);
 
-    // load result ////////////////////////////////////////////////////////
-    var userArea = document.createElement('div');
-    userArea.setAttribute('id', 'userArea');
-    
-    var pieChart = document.createElement('img');
-    pieChart.src = '/assets/pie-chart.png';
-    userArea.appendChild(pieChart);
-    
-    stat.appendChild(newElement('h3', "▷ 파이차트 추후 지원 예정"));
-    stat.appendChild(userArea);
+    // load user info ////////////////////////////////////////////////////
 
+    // API to solved.ac
+    const solvedRequestURL = 'https://solved.ac/api/v3/user/show?handle=' + id;
+    var solvedRequest = new XMLHttpRequest();
+    solvedRequest.open('GET', solvedRequestURL);
+    solvedRequest.responseType = 'json';
+    solvedRequest.send();
+
+    solvedRequest.onload = function() {
+        const json = solvedRequest.response;
+        //console.log(json);
+
+        var handleTier = document.querySelector('img#userTierImg');
+        handleTier.src = "/assets/solved-ac-emoji/" + tierChar(json['tier']) + ".png";
+
+        idField.innerHTML = "<a href=" + "https://acmicpc.net/user/" + id + ">" + id + "</a>";
+
+        var userInfo = document.getElementsByTagName('user-info')[0];
+
+        var userSchool = document.createElement('div');
+        userSchool.setAttribute('id', 'user-school');
+        userSchool.setAttribute('class', 'flexwrap');
+
+        var schoolImg = document.createElement('img');
+        schoolImg.setAttribute('id', 'schoolImg');
+        schoolImg.setAttribute('src', '/assets/106-Book.png');
+        userSchool.appendChild(schoolImg);
+
+        for(let organization of json['organizations']) {
+            var schoolName = document.createElement('span');
+            schoolName.textContent = organization['name'];
+            userSchool.appendChild(schoolName);
+        }
+
+        userInfo.appendChild(userSchool);
+
+        var userSolved = document.createElement('div');
+        userSolved.setAttribute('id', 'user-solved');
+
+        var ranking = document.createElement('span');
+        ranking.innerHTML = "<b>" + json['rank'] + "</b> 위";
+        userSolved.appendChild(ranking);
+
+        var solved = document.createElement('span');
+        solved.innerHTML = "<b>" + json['solvedCount'] + "</b> 문제 해결";
+        userSolved.appendChild(solved);
+
+        var rating = document.createElement('span');
+        rating.innerHTML = "Rating <b>" + json['rating'] + "</b>";
+        userSolved.appendChild(rating);
+
+        userInfo.appendChild(userSolved);
+    }
+    /////////////////////////////////////////////////////////////////////
+
+    // recommend result
 
     var flexBox = newElement('div');
     flexBox.setAttribute('class', 'flexwrap');
@@ -117,7 +152,7 @@ function loadStatus(json) {
         tierImg.setAttribute("class", "problemTierImge");
         tierImg.setAttribute("src", "/assets/solved-ac-emoji/" + tierChar(problem["tier"]) + ".png");
         flexBox.appendChild(tierImg);
-        var problemLink = newElement('a', "icpc.me/" + problem['id']);
+        var problemLink = newElement('a', problem['id'] + '번 - ' + problem['name']);
         problemLink.setAttribute('href', "https://icpc.me/" + problem['id']);
         flexBox.appendChild(problemLink);
         var item = newElement('li');
@@ -140,17 +175,15 @@ function loadStatus(json) {
     
         var problemsList = newElement('ul');
         for (problem of problems[tags]) {
-            var flexBox2 = newElement('div');
-            flexBox2.setAttribute('class', 'li-inline');
+            var item = newElement('li');
+            item.setAttribute('class', 'li-inline');
             var tierImg = newElement('img');
             tierImg.setAttribute("class", "problemTierImge");
             tierImg.setAttribute("src", "/assets/solved-ac-emoji/" + tierChar(problem["tier"]) + ".png");
-            flexBox2.appendChild(tierImg);
-            var problemLink = newElement('a', "icpc.me/" + problem['id']);
+            item.appendChild(tierImg);
+            var problemLink = newElement('a', problem['id'] + '번 - ' + problem['name']);
             problemLink.setAttribute('href', "https://icpc.me/" + problem['id']);
-            flexBox2.appendChild(problemLink);
-            var item = newElement('li');
-            item.appendChild(flexBox2);
+            item.appendChild(problemLink);
             problemsList.appendChild(item);
         }
         

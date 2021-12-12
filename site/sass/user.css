@@ -1,5 +1,4 @@
 user-info {
-    display: none;
     margin: 0.3rem 0rem;
     font-size: 1rem;
 }
@@ -15,14 +14,14 @@ user-info div {
     font-weight: bold;
 }
 
+#user-school span{
+    margin-left: 0.5rem;
+}
+
 #user-solved span {
     color: gray;
     font-weight: bold;
     margin-right: 1rem;
-}
-
-#userArea {
-    text-align: center;
 }
 
 /****/
@@ -44,6 +43,7 @@ img.problemTierImge {
     margin: 0rem 0.6rem 0rem 0rem;
     width: 1rem;
     height: auto;
+    vertical-align: middle;
 }
 
 /****/
@@ -56,8 +56,8 @@ li {
     margin: 1rem;
 }
 
-li .li-inline {
-    display: inline-flex;
+li a:hover {
+    text-decoration: underline;
 }
 
 ul {
