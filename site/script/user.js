@@ -77,6 +77,8 @@ function loadStatus(json) {
     var pieChart = document.createElement('img');
     pieChart.src = '/assets/pie-chart.png';
     userArea.appendChild(pieChart);
+    
+    stat.appendChild(newElement('h3', "▷ 파이차트 추후 지원 예정"));
     stat.appendChild(userArea);
 
 
