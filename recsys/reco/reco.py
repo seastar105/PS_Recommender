@@ -93,6 +93,8 @@ class Model(object):
                 for x in range(1, len(user)):
                     if x in core_tag:
                         S += user[x]
+                if S == 0:
+                    continue
                 tagavg.append(user[tagidx] / S)
                 if user[0] == targetRank:
                     if user[tagidx] == 0: 
